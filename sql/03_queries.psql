@@ -1,0 +1,7 @@
+select * from cloud_data limit 20;
+
+select count(*) from cloud_data;
+
+select vm_type,c.ount(*) from cloud_data group by vm_type;
+
+select target,count(*) from cloud_data group by target;

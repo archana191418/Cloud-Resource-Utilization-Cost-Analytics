@@ -1,0 +1,22 @@
+-- let us start this 
+--first evaluating total number of rows
+
+select count(*) from cloud_data;
+
+--first 10 rows
+select * from cloud_data limit 10;
+
+--last 10 rows
+
+select * from cloud_data order by timestamp desc 10;
+
+--viewing distinct cloud provider 
+select distinct cloud_provider from cloud_data;
+
+--view distinct region 
+select distinct region from cloud_data;
+
+--distinct vm type
+select distinct vm_type from cloud_data;
+
+

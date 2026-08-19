@@ -1,0 +1,5 @@
+select avg(cpu_usage) as avg_cpu,avg(memory_usage) as avg_memory,avg(cost) as avg_cost from cloud_data;
+
+select cloud_provider,avg(cpu_usage) as avg_cpu,avg(memory_usage) as avg_memory,avg(cost) as avg_cost from cloud_data group by cloud_provider;
+
+select region,count(*) as total_vms from cloud_data group by region;

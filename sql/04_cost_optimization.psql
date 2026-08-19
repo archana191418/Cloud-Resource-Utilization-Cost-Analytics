@@ -1,0 +1,19 @@
+--underutilized machine 
+select * from cloud_data where underutilized=True;
+
+--high cpu machines
+select * from cloud_data where High_cpu=True;
+
+--high memory machine
+select * from cloud_data where high_memory=True;
+
+--top 10 costly total_vms
+select * from cloud_data order by desc limit 10 ;
+
+--cost of cloud cloud_provider
+
+select cloud_provider,sum(cost) as total_cost from cloud_data group by cloud_provider;
+
+--cost by region
+select region, sum(cost) as total_cost from cloud_data group by region;
+

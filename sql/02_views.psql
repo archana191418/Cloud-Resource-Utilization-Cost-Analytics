@@ -1,0 +1,3 @@
+create view underutilized_vms as select * from cloud_data where underutilized=True;
+
+create view expensive_vms as select * from cloud_data order by cost desc;

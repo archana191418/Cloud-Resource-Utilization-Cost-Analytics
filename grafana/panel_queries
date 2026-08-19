@@ -1,0 +1,173 @@
+# Grafana Dashboard Panel Queries
+
+## Panel 1 — Estimated Cloud Cost
+
+-- Calculates the estimated total cost for the recorded 5-minute observations.
+-- price_per_hour is converted to a 5-minute cost using 5/60.
+
+```sql
+SELECT
+    SUM(price_per_hour * 5.0 / 60.0) AS estimated_cost
+FROM cloud_cost_data;
+```
+
+---
+
+## Panel 2 — Average Resource Utilization
+
+-- Calculates the average utilization across all recorded resources.
+-- Used for the main utilization KPI/gauge.
+
+```sql
+SELECT
+    AVG(utilization) AS avg_utilization
+FROM cloud_cost_data;
+```
+
+---
+
+## Panel 3 — Average Utilization Over Time
+
+-- Converts the timestamp column into a PostgreSQL timestamp so Grafana
+-- can recognize it as a time field.
+-- Calculates average utilization at each timestamp.
+
+```sql
+SELECT
+    timestamp::timestamp AS time,
+    AVG(utilization) AS avg_utilization
+FROM cloud_cost_data
+GROUP BY timestamp::timestamp
+ORDER BY timestamp::timestamp;
+```
+
+---
+
+## Panel 4 — Average Cost by Utilization
+
+-- Divides resources into utilization bands.
+-- Calculates the average cost within each utilization band.
+-- Helps identify whether lower-utilized resources are still consuming
+-- significant infrastructure cost.
+
+```sql
+SELECT
+    CASE
+        WHEN utilization < 30 THEN '0-30%'
+        WHEN utilization < 60 THEN '30-60%'
+        WHEN utilization < 80 THEN '60-80%'
+        ELSE '80-100%'
+    END AS utilization_band,
+    AVG(cost) AS avg_cost
+FROM cloud_cost_data
+GROUP BY
+    CASE
+        WHEN utilization < 30 THEN '0-30%'
+        WHEN utilization < 60 THEN '30-60%'
+        WHEN utilization < 80 THEN '60-80%'
+        ELSE '80-100%'
+    END
+ORDER BY
+    MIN(utilization);
+```
+
+---
+
+## Panel 5 — Average Cost by VM Type
+
+-- Compares the average infrastructure cost of each VM configuration.
+-- Helps identify which VM types have higher observed costs.
+
+```sql
+SELECT
+    vm_type,
+    AVG(cost) AS avg_cost
+FROM cloud_cost_data
+GROUP BY vm_type
+ORDER BY avg_cost DESC;
+```
+
+---
+
+## Panel 6 — CPU and Memory Usage Over Time
+
+-- Tracks CPU and memory usage over the monitoring period.
+-- Both metrics are displayed as separate series in the same Grafana
+-- time-series panel.
+
+```sql
+SELECT
+    timestamp::timestamp AS time,
+    AVG(cpu_usage) AS avg_cpu,
+    AVG(memory_usage) AS avg_memory
+FROM cloud_cost_data
+GROUP BY timestamp::timestamp
+ORDER BY timestamp::timestamp;
+```
+
+---
+
+## Panel 7 — Optimization Recommendations
+
+-- Counts how many observations belong to each optimization recommendation.
+-- The target column contains values such as scale_up, scale_down,
+-- and no_action.
+
+```sql
+SELECT
+    target AS recommendation,
+    COUNT(*) AS resource_count
+FROM cloud_cost_data
+GROUP BY target
+ORDER BY resource_count DESC;
+```
+
+---
+
+## Panel 8 — Optimization Candidates
+
+-- Displays resources that have been flagged for an optimization action.
+-- no_action records are excluded.
+-- Results are prioritized so scale_down candidates appear first,
+-- followed by scale_up candidates.
+-- Within those groups, lower-utilization resources appear first.
+
+```sql
+SELECT
+    cloud_provider AS provider,
+    region,
+    vm_type,
+    ROUND(cpu_usage::numeric, 1) AS cpu,
+    ROUND(memory_usage::numeric, 1) AS memory,
+    ROUND(utilization::numeric, 1) AS utilization,
+    ROUND(price_per_hour::numeric, 4) AS price_per_hour,
+    ROUND(cost::numeric, 4) AS cost,
+    target AS recommendation
+FROM cloud_cost_data
+WHERE target <> 'no_action'
+ORDER BY
+    CASE
+        WHEN target = 'scale_down' THEN 1
+        WHEN target = 'scale_up' THEN 2
+        ELSE 3
+    END,
+    utilization ASC;
+```
+
+---
+
+# Dashboard Purpose
+
+These queries collectively provide:
+
+1. **Cost monitoring** — estimated infrastructure cost.
+2. **Utilization monitoring** — overall resource utilization.
+3. **Time-series analysis** — utilization, CPU, and memory trends.
+4. **Cost-efficiency analysis** — cost across utilization levels.
+5. **Infrastructure comparison** — cost by VM type.
+6. **Optimization analysis** — distribution of scaling recommendations.
+7. **Actionable investigation** — individual resources requiring optimization.
+
+The Grafana dashboard therefore connects:
+
+**Infrastructure Metrics → Utilization → Cost → Optimization Recommendation**
